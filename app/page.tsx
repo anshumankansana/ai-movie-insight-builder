@@ -1,65 +1,152 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { motion } from "framer-motion";
+
+interface Sentiment {
+  summary: string;
+  classification: "Positive" | "Mixed" | "Negative";
+}
+
+interface MovieResponse {
+  title: string;
+  poster: string;
+  year: string;
+  rating: string;
+  plot: string;
+  cast: string;
+  sentiment: Sentiment;
+}
 
 export default function Home() {
+  const [imdbId, setImdbId] = useState("");
+  const [data, setData] = useState<MovieResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const fetchMovie = async () => {
+    if (!/^tt\d{7,8}$/.test(imdbId)) {
+      setError("Invalid IMDb ID format (Example: tt0133093)");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      setData(null);
+
+      const res = await fetch("/api/movie", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imdbId }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
+
+      setData(result);
+    } catch (err: any) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      fetchMovie();
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white p-6 flex flex-col items-center">
+
+      <h1 className="text-4xl font-bold mb-8 text-center">
+        🎬 AI Movie Insight Builder
+      </h1>
+
+      <div className="flex gap-4 mb-6">
+        <input
+          value={imdbId}
+          onChange={(e) => setImdbId(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter IMDb ID (tt0133093)"
+          className="px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <button
+          onClick={fetchMovie}
+          disabled={loading}
+          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50"
+        >
+          {loading ? "Analyzing..." : "Analyze"}
+        </button>
+      </div>
+
+      {error && (
+        <div className="bg-red-900/50 border border-red-500 px-4 py-2 rounded mb-4">
+          {error}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+      )}
+
+      {loading && (
+        <div className="animate-pulse bg-gray-800 w-full max-w-4xl h-64 rounded-xl" />
+      )}
+
+      {data && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-4xl bg-gray-900/80 backdrop-blur-md p-6 rounded-2xl shadow-xl grid md:grid-cols-2 gap-6"
+        >
+          <div>
+            <img
+              src={data.poster !== "N/A" ? data.poster : "/placeholder.png"}
+              alt={data.title}
+              className="rounded-lg shadow-lg"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+
+          <div>
+            <h2 className="text-3xl font-bold">{data.title}</h2>
+            <p className="text-gray-400">
+              {data.year} • IMDb {data.rating}
+            </p>
+
+            <p className="mt-4">{data.plot}</p>
+
+            <p className="mt-3 text-sm text-gray-400">
+              Cast: {data.cast}
+            </p>
+
+            <a
+              href={`https://www.imdb.com/title/${imdbId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-4 text-blue-400 hover:underline"
+            >
+              View on IMDb →
+            </a>
+
+            <div className="mt-6 p-4 bg-gray-800 rounded-xl">
+              <h3 className="font-semibold mb-2">AI Audience Sentiment</h3>
+              <p className="text-sm">{data.sentiment.summary}</p>
+
+              <span
+                className={`inline-block mt-3 px-3 py-1 rounded-full text-sm font-semibold ${
+                  data.sentiment.classification === "Positive"
+                    ? "bg-green-600"
+                    : data.sentiment.classification === "Negative"
+                    ? "bg-red-600"
+                    : "bg-yellow-600"
+                }`}
+              >
+                {data.sentiment.classification}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </main>
   );
 }
