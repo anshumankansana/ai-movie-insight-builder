@@ -3,7 +3,7 @@ A full-stack web application that allows users to enter an IMDb movie ID and ins
 This project was built as part of a Full-Stack Developer Internship assignment.
 Setup Instructions
 1.	1. Clone the repository:
-git clone https://github.com/YOUR_USERNAME/ai-movie-insight-builder.git
+git clone https://github.com/anshumankansana/ai-movie-insight-builder.git
 cd ai-movie-insight-builder
 2.	2. Install dependencies:
 npm install
